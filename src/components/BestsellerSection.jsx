@@ -16,6 +16,7 @@ const gridItem = {
 
 export default function BestsellerSection() {
   const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase
@@ -23,9 +24,10 @@ export default function BestsellerSection() {
       .select('*')
       .eq('bestseller', true)
       .limit(8)
-      .then(({ data }) => setProducts(data || []))
+      .then(({ data }) => { setProducts(data || []); setLoading(false) })
   }, [])
 
+  if (loading) return <Box minH="600px" bg="gray.50" />
   if (products.length === 0) return null
 
   return (

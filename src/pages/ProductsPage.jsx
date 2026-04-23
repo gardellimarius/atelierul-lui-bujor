@@ -76,7 +76,7 @@ export default function ProductsPage() {
           </Box>
 
           {loading ? (
-            <Box minH="60vh" />
+            <Box minH="40vh" />
           ) : products.length === 0 ? (
             <Box py={20} textAlign="center">
               <Text fontFamily="heading" fontSize="2xl" fontWeight="300" color="gray.300" mb={3}>
@@ -102,9 +102,13 @@ export default function ProductsPage() {
           )}
         </Box>
 
-        <ContactSection />
-        <LocationSection />
-        <Footer />
+        {!loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+            <ContactSection />
+            <LocationSection />
+            <Footer />
+          </motion.div>
+        )}
       </Flex>
     </PageTransition>
   )

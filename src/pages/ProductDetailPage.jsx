@@ -128,7 +128,7 @@ export default function ProductDetailPage() {
           </Flex>
 
           {loading ? (
-            <Text fontSize="sm" color="gray.400">Se încarcă...</Text>
+            <Box minH="60vh" />
           ) : !product ? (
             <Box py={20} textAlign="center">
               <Text fontFamily="heading" fontSize="2xl" fontWeight="300" color="gray.300">Lucrarea nu a fost găsită.</Text>
@@ -467,9 +467,13 @@ export default function ProductDetailPage() {
           )}
         </Box>
 
-        <ContactSection />
-        <LocationSection />
-        <Footer />
+        {!loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+            <ContactSection />
+            <LocationSection />
+            <Footer />
+          </motion.div>
+        )}
       </Flex>
 
       <AnimatePresence>

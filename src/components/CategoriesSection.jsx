@@ -15,6 +15,7 @@ const stagger = {
 
 export default function CategoriesSection() {
   const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
@@ -22,16 +23,18 @@ export default function CategoriesSection() {
         supabase.from('categories').select('name').order('name'),
         supabase.from('products').select('category, image_url').neq('category', '').neq('category', null),
       ])
-      if (!cats) return
+      if (!cats) { setLoading(false); return }
       const imageMap = {}
       ;(products || []).forEach(p => {
         if (p.category && p.image_url && !imageMap[p.category]) imageMap[p.category] = p.image_url
       })
       setCategories(cats.map(c => ({ name: c.name, image_url: imageMap[c.name] || null })))
+      setLoading(false)
     }
     load()
   }, [])
 
+  if (loading) return <Box minH="520px" bg="white" />
   if (categories.length === 0) return null
 
   return (
