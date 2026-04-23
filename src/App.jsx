@@ -6,6 +6,7 @@ import ProductDetailPage from './pages/ProductDetailPage'
 import WishlistPage from './pages/WishlistPage'
 import LoginPage from './pages/admin/LoginPage'
 import AdminPage from './pages/admin/AdminPage'
+import AdminProductEditPage from './pages/admin/AdminProductEditPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import { WishlistProvider } from './context/WishlistContext'
 
@@ -29,6 +30,16 @@ export default function App() {
           <Route path="/admin" element={
             <ProtectedRoute>
               <AdminPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/products/new" element={
+            <ProtectedRoute>
+              <AdminProductEditPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/products/:id" element={
+            <ProtectedRoute>
+              <AdminProductEditPage />
             </ProtectedRoute>
           } />
         </Routes>

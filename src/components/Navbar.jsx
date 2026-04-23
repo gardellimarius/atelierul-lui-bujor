@@ -47,6 +47,45 @@ export default function Navbar() {
     _hover: { color: 'gray.900', textDecoration: 'none' },
   }
 
+  const WishlistIcon = ({ mobile = false }) => (
+    <Box
+      as={RouterLink}
+      to="/wishlist"
+      display="flex"
+      alignItems="center"
+      position="relative"
+      color="gray.400"
+      _hover={{ color: 'gray.900', textDecoration: 'none' }}
+      transition="color 0.2s"
+      onClick={mobile ? () => setMenuOpen(false) : undefined}
+    >
+      <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+      {wishlist.length > 0 && (
+        <Box
+          position="absolute"
+          top="-6px"
+          right="-7px"
+          bg="gray.900"
+          color="white"
+          fontSize="9px"
+          fontWeight="700"
+          lineHeight="1"
+          minW="15px"
+          h="15px"
+          borderRadius="full"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          px="2px"
+        >
+          {wishlist.length}
+        </Box>
+      )}
+    </Box>
+  )
+
   return (
     <Box position="sticky" top="0" zIndex={50} bg="white" borderBottom="1px solid" borderColor="gray.100">
       <Flex maxW="7xl" mx="auto" px={6} h="16" align="center" gap={8}>
@@ -64,7 +103,8 @@ export default function Navbar() {
           Atelierul lui Bujor
         </Box>
 
-        <Flex display={{ base: 'none', md: 'flex' }} align="center" gap={7} flex={1}>
+        {/* Desktop nav links */}
+        <Flex display={{ base: 'none', md: 'flex' }} align="center" gap={7} flex={1} overflow="hidden">
           <Box as={RouterLink} to="/products?type=painting" onClick={e => handleSamePageClick(e, '/products?type=painting')} {...navLink}>Picturi</Box>
           <Box as={RouterLink} to="/products?type=frame" onClick={e => handleSamePageClick(e, '/products?type=frame')} {...navLink}>Rame</Box>
           {categories.map(cat => {
@@ -78,76 +118,28 @@ export default function Navbar() {
           <Box as="a" href="#contact" {...navLink}>Contact</Box>
         </Flex>
 
-        <Box
-          as={RouterLink}
-          to="/wishlist"
-          display={{ base: 'none', md: 'flex' }}
-          alignItems="center"
-          position="relative"
-          color="gray.400"
-          ml="auto"
-          _hover={{ color: 'gray.900', textDecoration: 'none' }}
-          transition="color 0.2s"
-        >
-          <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          {wishlist.length > 0 && (
-            <Box
-              position="absolute"
-              top="-6px"
-              right="-7px"
-              bg="gray.900"
-              color="white"
-              fontSize="9px"
-              fontWeight="700"
-              lineHeight="1"
-              minW="15px"
-              h="15px"
-              borderRadius="full"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              px="2px"
-            >
-              {wishlist.length}
-            </Box>
-          )}
+        {/* Desktop wishlist */}
+        <Box display={{ base: 'none', md: 'flex' }} ml="auto">
+          <WishlistIcon />
         </Box>
 
-        <Flex align="center" gap={4} display={{ base: 'none', md: 'flex' }}>
-          {searchOpen ? (
-            <Flex as="form" onSubmit={handleSearch} align="center" borderBottom="1px solid" borderColor="gray.300" pb={1} gap={2}>
-              <Input
-                border="none"
-                fontSize="xs"
-                placeholder="Caută lucrări..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                w="44"
-                p={0}
-                h="auto"
-                autoFocus
-                _focus={{ boxShadow: 'none' }}
-              />
-              <Box as="button" type="button" color="gray.400" onClick={() => setSearchOpen(false)}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </Box>
-            </Flex>
-          ) : (
-            <Box as="button" color="gray.400" _hover={{ color: 'gray.900' }} transition="color 0.2s" onClick={() => setSearchOpen(true)}>
-              <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </Box>
-          )}
+        {/* Desktop search icon — hidden when search is open (overlay takes over) */}
+        <Flex align="center" display={{ base: 'none', md: 'flex' }} visibility={searchOpen ? 'hidden' : 'visible'}>
+          <Box as="button" color="gray.400" _hover={{ color: 'gray.900' }} transition="color 0.2s" onClick={() => setSearchOpen(true)}>
+            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </Box>
         </Flex>
 
+        {/* Mobile wishlist icon */}
+        <Box display={{ base: 'flex', md: 'none' }} ml="auto">
+          <WishlistIcon mobile />
+        </Box>
+
+        {/* Mobile hamburger */}
         <Box
           as="button"
-          ml="auto"
           display={{ base: 'flex', md: 'none' }}
           color="gray.600"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -160,6 +152,58 @@ export default function Navbar() {
         </Box>
       </Flex>
 
+      {/* Desktop search overlay — sits on top of nav, no layout impact */}
+      {searchOpen && (
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          h="16"
+          bg="white"
+          display={{ base: 'none', md: 'flex' }}
+          alignItems="center"
+          borderBottom="1px solid"
+          borderColor="gray.100"
+          zIndex={10}
+        >
+          <Flex
+            as="form"
+            onSubmit={handleSearch}
+            align="center"
+            maxW="7xl"
+            mx="auto"
+            w="full"
+            px={6}
+            gap={3}
+          >
+            <Box color="gray.400" flexShrink={0}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </Box>
+            <Input
+              border="none"
+              fontSize="sm"
+              placeholder="Caută lucrări..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              flex={1}
+              p={0}
+              h="auto"
+              autoFocus
+              _focus={{ boxShadow: 'none' }}
+            />
+            <Box as="button" type="button" color="gray.400" _hover={{ color: 'gray.700' }} onClick={() => { setSearchOpen(false); setSearch('') }}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Box>
+          </Flex>
+        </Box>
+      )}
+
+      {/* Mobile menu */}
       {menuOpen && (
         <Box display={{ md: 'none' }} borderTop="1px solid" borderColor="gray.100" bg="white" px={6} py={6}>
           <Flex as="form" onSubmit={handleSearch} align="center" borderBottom="1px solid" borderColor="gray.200" pb={3} gap={2} mb={5}>
@@ -197,14 +241,6 @@ export default function Navbar() {
             })}
             <Box as="a" href="#contact" fontSize="xs" letterSpacing="0.12em" textTransform="uppercase" color="gray.600" _hover={{ color: 'gray.900', textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
               Contact
-            </Box>
-            <Box as={RouterLink} to="/wishlist" fontSize="xs" letterSpacing="0.12em" textTransform="uppercase" color="gray.600" _hover={{ color: 'gray.900', textDecoration: 'none' }} onClick={() => setMenuOpen(false)} display="flex" alignItems="center" gap={2}>
-              Lista mea
-              {wishlist.length > 0 && (
-                <Box as="span" bg="gray.900" color="white" fontSize="9px" fontWeight="700" lineHeight="1" minW="15px" h="15px" borderRadius="full" display="inline-flex" alignItems="center" justifyContent="center" px="2px">
-                  {wishlist.length}
-                </Box>
-              )}
             </Box>
           </Flex>
         </Box>

@@ -1,4 +1,3 @@
-import { Link as RouterLink } from 'react-router-dom'
 import { Box, Flex, Text } from '@chakra-ui/react'
 
 export default function Footer() {
@@ -11,9 +10,7 @@ export default function Footer() {
         <Text fontSize="xs" letterSpacing="0.08em" color="gray.700">
           © {new Date().getFullYear()} · Toate drepturile rezervate
         </Text>
-        <Box as={RouterLink} to="/admin/login" fontSize="xs" letterSpacing="0.08em" color="gray.800" _hover={{ color: 'gray.500', textDecoration: 'none' }} transition="color 0.2s">
-          Admin
-        </Box>
+        <Text fontSize="xs" letterSpacing="0.08em" color="gray.800"> </Text>
       </Flex>
     </Box>
   )

@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import AdminSidebar from '../../components/AdminSidebar'
 
-const empty = { name: '', description: '', year_created: '', subject: '', medium: '', dimensions: '', details: '', category: '', type: 'painting', bestseller: false }
 const defaultSettings = { hero_title: '', hero_title_italic: '', hero_subtitle: '', contact_email: '', phone: '', location_name: '', location_address: '', schedule_luni: '', schedule_marti: '', schedule_miercuri: '', schedule_joi: '', schedule_vineri: '', schedule_sambata: '', schedule_duminica: '', location_coords: '' }
 
 const scheduleDays = [
@@ -14,31 +14,8 @@ const scheduleDays = [
   { key: 'schedule_sambata', label: 'Sâmbătă' },
   { key: 'schedule_duminica', label: 'Duminică' },
 ]
+
 const PAGE_SIZE = 10
-
-function IconGrid() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  )
-}
-
-function IconContent() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-  )
-}
-
-function IconLogout() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-    </svg>
-  )
-}
 
 function IconSearch() {
   return (
@@ -49,17 +26,9 @@ function IconSearch() {
 }
 
 export default function AdminPage() {
-  const [view, setView] = useState('products')
-
+  const location = useLocation()
+  const [view, setView] = useState(location.state?.view || 'products')
   const [products, setProducts] = useState([])
-  const [form, setForm] = useState(empty)
-  const [editingId, setEditingId] = useState(null)
-  const [productImages, setProductImages] = useState([])
-  const [mainImageUrl, setMainImageUrl] = useState('')
-  const [imageFiles, setImageFiles] = useState([])
-  const [imagePreview, setImagePreview] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [categories, setCategories] = useState([])
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryType, setNewCategoryType] = useState('all')
@@ -71,7 +40,6 @@ export default function AdminPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [page, setPage] = useState(1)
 
-  const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => { fetchProducts(); fetchSettings(); fetchCategories() }, [])
@@ -139,128 +107,12 @@ export default function AdminPage() {
     showToast('Setările au fost salvate')
   }
 
-  async function fetchProductImages(productId) {
-    const { data } = await supabase.from('product_images').select('*').eq('product_id', productId).order('sort_order')
-    setProductImages(data || [])
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setLoading(true)
-    if (editingId) {
-      await supabase.from('products').update(form).eq('id', editingId)
-      showToast('Lucrare salvată')
-      await fetchProducts()
-    } else {
-      const { data } = await supabase.from('products').insert(form).select().single()
-      if (data) {
-        showToast('Lucrare creată! Apasă Editează din listă pentru a adăuga imagini.')
-        resetForm()
-        await fetchProducts()
-      }
-    }
-    setLoading(false)
-  }
-
-  async function handleUploadImages() {
-    if (!imageFiles.length || !editingId) return
-    setUploading(true)
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i]
-      const ext = file.name.split('.').pop()
-      const fileName = `${editingId}-${Date.now()}-${i}.${ext}`
-      const { error } = await supabase.storage.from('products').upload(fileName, file, { upsert: false })
-      if (error) { showToast('Eroare: ' + error.message, 'error'); continue }
-      const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName)
-      await supabase.from('product_images').insert({ product_id: editingId, image_url: publicUrl, sort_order: productImages.length + i })
-    }
-    setImageFiles([])
-    setImagePreview([])
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    await fetchProductImages(editingId)
-    const { data: prod } = await supabase.from('products').select('image_url').eq('id', editingId).single()
-    if (!prod?.image_url) {
-      const { data: imgs } = await supabase.from('product_images').select('image_url').eq('product_id', editingId).order('sort_order').limit(1)
-      if (imgs?.length) {
-        await supabase.from('products').update({ image_url: imgs[0].image_url }).eq('id', editingId)
-        setMainImageUrl(imgs[0].image_url)
-        await fetchProducts()
-      }
-    }
-    setUploading(false)
-    showToast('Imagini încărcate')
-  }
-
-  async function setMainImage(imageUrl) {
-    await supabase.from('products').update({ image_url: imageUrl }).eq('id', editingId)
-    setMainImageUrl(imageUrl)
-    await fetchProducts()
-  }
-
-  async function deleteImage(img) {
-    await supabase.from('product_images').delete().eq('id', img.id)
-    const remaining = productImages.filter(i => i.id !== img.id)
-    setProductImages(remaining)
-    if (img.image_url === mainImageUrl) {
-      const newMain = remaining[0]?.image_url || null
-      await supabase.from('products').update({ image_url: newMain }).eq('id', editingId)
-      setMainImageUrl(newMain || '')
-      await fetchProducts()
-    }
-  }
-
-  function startEdit(product) {
-    setEditingId(product.id)
-    setForm({
-      name: product.name,
-      description: product.description || '',
-      year_created: product.year_created || '',
-      subject: product.subject || '',
-      medium: product.medium || '',
-      dimensions: product.dimensions || '',
-      details: product.details || '',
-      category: product.category || '',
-      type: product.type || 'painting',
-      bestseller: product.bestseller || false,
-    })
-    setMainImageUrl(product.image_url || '')
-    setImageFiles([])
-    setImagePreview([])
-    fetchProductImages(product.id)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  function resetForm() {
-    setEditingId(null)
-    setForm(empty)
-    setProductImages([])
-    setMainImageUrl('')
-    setImageFiles([])
-    setImagePreview([])
-  }
-
   async function handleDelete(id) {
     if (!confirm('Ștergi această lucrare?')) return
     await supabase.from('products').delete().eq('id', id)
-    if (editingId === id) resetForm()
     await fetchProducts()
     showToast('Lucrare ștearsă', 'error')
   }
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    navigate('/admin/login')
-  }
-
-  function handleFileChange(e) {
-    const files = Array.from(e.target.files || [])
-    setImageFiles(files)
-    setImagePreview(files.map(f => URL.createObjectURL(f)))
-  }
-
-  const filteredCategories = categories.filter(c =>
-    c.type === 'all' || c.type === form.type
-  )
 
   const filtered = products
     .filter(p => typeFilter === 'all' || p.type === typeFilter || (!p.type && typeFilter === 'painting'))
@@ -279,57 +131,18 @@ export default function AdminPage() {
   const inp = "w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-zinc-800 focus:border-transparent transition"
   const lbl = "block text-xs font-medium text-gray-500 mb-1.5"
 
-  const navItems = [
-    { id: 'products', label: 'Lucrări', icon: <IconGrid /> },
-    { id: 'content', label: 'Conținut', icon: <IconContent /> },
-  ]
-
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-
-      <aside className="w-56 bg-zinc-950 flex flex-col flex-shrink-0 border-r border-zinc-800">
-        <div className="px-5 pt-6 pb-5 border-b border-zinc-800">
-          <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.18em] mb-1">Admin</p>
-          <p className="text-sm font-semibold text-white leading-tight">Atelierul lui Bujor</p>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left ${
-                view === item.id
-                  ? 'bg-white/10 text-white'
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="px-3 pb-5 border-t border-zinc-800 pt-4">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-all"
-          >
-            <IconLogout />
-            Ieșire
-          </button>
-        </div>
-      </aside>
+      <AdminSidebar activeView={view} onNavigate={setView} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-
         <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between flex-shrink-0">
           <h1 className="text-sm font-semibold text-gray-900">
             {view === 'products' ? 'Lucrări' : 'Conținut'}
           </h1>
           {view === 'products' && (
             <button
-              onClick={resetForm}
+              onClick={() => navigate('/admin/products/new')}
               className="bg-zinc-900 text-white text-xs font-medium px-4 py-2 rounded-lg hover:bg-zinc-700 transition-colors"
             >
               + Lucrare nouă
@@ -351,273 +164,119 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
-
-                <div className="xl:col-span-2 space-y-4">
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                    <div className="flex items-center justify-between mb-5">
-                      <h2 className="text-sm font-semibold text-gray-900">
-                        {editingId ? 'Editează lucrarea' : 'Lucrare nouă'}
-                      </h2>
-                      {editingId && (
-                        <button onClick={resetForm} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
-                          ✕ Anulează
-                        </button>
-                      )}
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-3.5">
-                      <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
-                        {[['painting', 'Pictură'], ['frame', 'Ramă']].map(([t, l]) => (
-                          <button key={t} type="button" onClick={() => setForm({ ...form, type: t, category: '' })}
-                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                              form.type === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-                            }`}>
-                            {l}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div>
-                        <label className={lbl}>Titlu *</label>
-                        <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required className={inp} placeholder="Titlul lucrării" />
-                      </div>
-
-                      <div>
-                        <label className={lbl}>Categorie</label>
-                        {filteredCategories.length > 0 ? (
-                          <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className={inp}>
-                            <option value="">Fără categorie</option>
-                            {filteredCategories.map(c => (
-                              <option key={c.id} value={c.name}>{c.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <div className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                            Nicio categorie definită —{' '}
-                            <button type="button" onClick={() => setView('content')} className="text-zinc-700 underline hover:no-underline">
-                              adaugă din Conținut
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className={lbl}>Descriere</label>
-                        <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} className={`${inp} resize-none`} placeholder="Povestea lucrării, inspirația..." />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className={lbl}>An creație</label>
-                          <input type="text" value={form.year_created} onChange={e => setForm({ ...form, year_created: e.target.value })} className={inp} placeholder="2024" />
-                        </div>
-                        <div>
-                          <label className={lbl}>Subiect</label>
-                          <input type="text" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} className={inp} placeholder="Peisaj" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className={lbl}>Mediu</label>
-                        <input type="text" value={form.medium} onChange={e => setForm({ ...form, medium: e.target.value })} className={inp} placeholder="Ulei pe pânză" />
-                      </div>
-                      <div>
-                        <label className={lbl}>Dimensiuni</label>
-                        <input type="text" value={form.dimensions} onChange={e => setForm({ ...form, dimensions: e.target.value })} className={inp} placeholder="60 × 80 cm" />
-                      </div>
-                      <div>
-                        <label className={lbl}>Alte detalii</label>
-                        <textarea value={form.details} onChange={e => setForm({ ...form, details: e.target.value })} rows={2} className={`${inp} resize-none`} placeholder="Ramă inclusă, pânză de in..." />
-                      </div>
-
-                      <label className="flex items-center gap-2.5 cursor-pointer py-1">
-                        <input type="checkbox" checked={form.bestseller} onChange={e => setForm({ ...form, bestseller: e.target.checked })} className="w-4 h-4 rounded accent-zinc-900" />
-                        <span className="text-sm text-gray-600">Lucrare recomandată</span>
-                      </label>
-
-                      <div className="flex gap-2 pt-1">
-                        <button type="submit" disabled={loading}
-                          className="flex-1 bg-zinc-900 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50">
-                          {loading ? 'Se salvează...' : editingId ? 'Salvează modificările' : 'Creează lucrarea'}
-                        </button>
-                        {!editingId && (
-                          <button type="button" onClick={resetForm}
-                            className="px-3 text-sm border border-gray-200 rounded-lg text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors" title="Resetează formularul">
-                            ↺
-                          </button>
-                        )}
-                      </div>
-                    </form>
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <IconSearch />
+                    </span>
+                    <input
+                      type="text" value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="Caută după titlu sau categorie..."
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800 focus:border-transparent transition"
+                    />
                   </div>
+                  <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5 flex-shrink-0">
+                    {[['all', 'Toate'], ['painting', 'Picturi'], ['frame', 'Rame']].map(([t, l]) => (
+                      <button key={t} onClick={() => setTypeFilter(t)}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                          typeFilter === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+                        }`}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                  {editingId && (
-                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-4">
-                        Imagini {productImages.length > 0 && <span className="text-gray-400 font-normal">({productImages.length})</span>}
-                      </h3>
-
-                      {productImages.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                          {productImages.map(img => {
-                            const isMain = img.image_url === mainImageUrl
-                            return (
-                              <div key={img.id} className="relative group rounded-lg overflow-hidden bg-gray-50">
-                                <img src={img.image_url} alt="" className={`w-full aspect-square object-cover ${isMain ? 'ring-2 ring-zinc-900 ring-offset-1' : ''}`} />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                  {!isMain && (
-                                    <button onClick={() => setMainImage(img.image_url)}
-                                      className="bg-white text-zinc-900 text-xs px-2 py-1 rounded-md hover:bg-amber-50 hover:text-amber-600 transition-colors">★</button>
-                                  )}
-                                  <button onClick={() => deleteImage(img)}
-                                    className="bg-white text-red-400 text-xs px-2 py-1 rounded-md hover:bg-red-50 hover:text-red-600 transition-colors">✕</button>
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  {paged.length === 0 ? (
+                    <div className="py-20 text-center">
+                      <p className="text-sm text-gray-400">
+                        {search ? `Niciun rezultat pentru „${search}"` : 'Nicio lucrare încă.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50/60">
+                          <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Lucrare</th>
+                          <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Tip</th>
+                          <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 text-right">Acțiuni</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {paged.map(product => (
+                          <tr
+                            key={product.id}
+                            className="group hover:bg-gray-50/80 transition-colors cursor-pointer"
+                            onClick={() => navigate(`/admin/products/${product.id}`)}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                                  {product.image_url
+                                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-lg">🖼</div>
+                                  }
                                 </div>
-                                {isMain && (
-                                  <div className="absolute top-1.5 left-1.5 bg-zinc-900 text-white text-[10px] px-1.5 py-0.5 rounded leading-none">★</div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate leading-tight">{product.name}</p>
+                                  {product.category && <p className="text-xs text-gray-400 mt-0.5 truncate">{product.category}</p>}
+                                </div>
+                                {product.bestseller && (
+                                  <span className="flex-shrink-0 text-[10px] font-semibold bg-amber-50 text-amber-500 border border-amber-200 px-1.5 py-0.5 rounded-full">★</span>
                                 )}
                               </div>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      <div className="space-y-3">
-                        {imagePreview.length > 0 && (
-                          <div className="grid grid-cols-4 gap-1.5">
-                            {imagePreview.map((src, i) => (
-                              <img key={i} src={src} alt="" className="w-full aspect-square object-cover rounded-md opacity-60" />
-                            ))}
-                          </div>
-                        )}
-                        <input
-                          ref={fileInputRef}
-                          type="file" accept="image/*" multiple onChange={handleFileChange}
-                          className="w-full text-xs text-gray-500 file:mr-3 file:text-xs file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:rounded-md file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 file:transition-colors"
-                        />
-                        {imageFiles.length > 0 && (
-                          <button type="button" onClick={handleUploadImages} disabled={uploading}
-                            className="w-full bg-gray-100 text-gray-800 text-sm font-medium py-2.5 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
-                            {uploading ? 'Se încarcă...' : `Încarcă ${imageFiles.length} imagine${imageFiles.length > 1 ? 'i' : ''}`}
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-400 mt-3">★ = imagine principală</p>
-                    </div>
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                product.type === 'frame' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
+                              }`}>
+                                {product.type === 'frame' ? 'Ramă' : 'Pictură'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-3" onClick={e => e.stopPropagation()}>
+                                <button
+                                  onClick={() => navigate(`/admin/products/${product.id}`)}
+                                  className="text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors"
+                                >
+                                  Editează
+                                </button>
+                                <button onClick={() => handleDelete(product.id)}
+                                  className="text-xs text-gray-300 hover:text-red-500 transition-colors">
+                                  Șterge
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   )}
                 </div>
 
-                <div className="xl:col-span-3 space-y-4">
-
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1 relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                        <IconSearch />
-                      </span>
-                      <input
-                        type="text" value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="Caută după titlu sau categorie..."
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800 focus:border-transparent transition"
-                      />
-                    </div>
-                    <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5 flex-shrink-0">
-                      {[['all', 'Toate'], ['painting', 'Picturi'], ['frame', 'Rame']].map(([t, l]) => (
-                        <button key={t} onClick={() => setTypeFilter(t)}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                            typeFilter === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-xs text-gray-400">
+                      {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} din {filtered.length}
+                    </p>
+                    <div className="flex gap-1">
+                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                        className="w-8 h-8 flex items-center justify-center text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">‹</button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                        <button key={n} onClick={() => setPage(n)}
+                          className={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded-lg border transition-colors ${
+                            n === page ? 'bg-zinc-900 text-white border-zinc-900' : 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900'
                           }`}>
-                          {l}
+                          {n}
                         </button>
                       ))}
+                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                        className="w-8 h-8 flex items-center justify-center text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">›</button>
                     </div>
                   </div>
-
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                    {paged.length === 0 ? (
-                      <div className="py-20 text-center">
-                        <p className="text-sm text-gray-400">
-                          {search ? `Niciun rezultat pentru „${search}"` : 'Nicio lucrare încă.'}
-                        </p>
-                      </div>
-                    ) : (
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b border-gray-100 bg-gray-50/60">
-                            <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Lucrare</th>
-                            <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Tip</th>
-                            <th className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 text-right">Acțiuni</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {paged.map(product => (
-                            <tr
-                              key={product.id}
-                              className={`group hover:bg-gray-50/80 transition-colors ${editingId === product.id ? 'bg-violet-50/40' : ''}`}
-                            >
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                                    {product.image_url
-                                      ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-lg">🖼</div>
-                                    }
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate leading-tight">{product.name}</p>
-                                    {product.category && <p className="text-xs text-gray-400 mt-0.5 truncate">{product.category}</p>}
-                                  </div>
-                                  {product.bestseller && (
-                                    <span className="flex-shrink-0 text-[10px] font-semibold bg-amber-50 text-amber-500 border border-amber-200 px-1.5 py-0.5 rounded-full">★</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 hidden sm:table-cell">
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                                  product.type === 'frame' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
-                                }`}>
-                                  {product.type === 'frame' ? 'Ramă' : 'Pictură'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-3">
-                                  <button onClick={() => startEdit(product)}
-                                    className={`text-xs font-medium transition-colors ${
-                                      editingId === product.id ? 'text-violet-600' : 'text-gray-400 hover:text-gray-900'
-                                    }`}>
-                                    {editingId === product.id ? 'Editezi' : 'Editează'}
-                                  </button>
-                                  <button onClick={() => handleDelete(product.id)}
-                                    className="text-xs text-gray-300 hover:text-red-500 transition-colors">
-                                    Șterge
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-1">
-                      <p className="text-xs text-gray-400">
-                        {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} din {filtered.length}
-                      </p>
-                      <div className="flex gap-1">
-                        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                          className="w-8 h-8 flex items-center justify-center text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">‹</button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                          <button key={n} onClick={() => setPage(n)}
-                            className={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded-lg border transition-colors ${
-                              n === page ? 'bg-zinc-900 text-white border-zinc-900' : 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900'
-                            }`}>
-                            {n}
-                          </button>
-                        ))}
-                        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                          className="w-8 h-8 flex items-center justify-center text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">›</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           )}
@@ -764,11 +423,7 @@ export default function AdminPage() {
                     </div>
                     <p className="text-[11px] text-gray-400 mt-1.5">Lasă gol pentru zilele închise.</p>
                   </div>
-                  <div>
-                    <label className={lbl}>Coordonate hartă (latitudine, longitudine)</label>
-                    <input type="text" value={settings.location_coords} onChange={e => setSettings({ ...settings, location_coords: e.target.value })} placeholder="45.0261866,23.2660107" className={inp} />
-                    <p className="text-[11px] text-gray-400 mt-1">Harta apare pe site doar dacă sunt completate coordonatele.</p>
-                  </div>
+
                 </div>
               </div>
 

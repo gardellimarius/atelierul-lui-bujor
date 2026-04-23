@@ -11,16 +11,15 @@ export default function ProductCard({ product }) {
       _hover={{ textDecoration: 'none' }}
       role="group"
     >
-      <Box
-        position="relative"
-        overflow="hidden"
-        bg="gray.100"
-        sx={{ aspectRatio: '3/4' }}
-      >
+      {/* Padding-bottom trick: 133.33% = 4/3 ratio → portrait 3:4 */}
+      <Box position="relative" w="full" paddingBottom="133.33%" overflow="hidden" bg="gray.100" flexShrink={0}>
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
+            position="absolute"
+            top={0}
+            left={0}
             w="full"
             h="full"
             objectFit="cover"
@@ -28,7 +27,7 @@ export default function ProductCard({ product }) {
             _groupHover={{ transform: 'scale(1.04)' }}
           />
         ) : (
-          <Box w="full" h="full" bg="gray.100" />
+          <Box position="absolute" top={0} left={0} w="full" h="full" bg="gray.100" />
         )}
 
         {product.bestseller && (
@@ -49,13 +48,14 @@ export default function ProductCard({ product }) {
         )}
       </Box>
 
-      <Box pt={3} pb={1}>
+      <Box pt={3} pb={1} minH="60px">
         <Text
           fontFamily="heading"
           fontSize="lg"
           fontWeight="400"
           color="gray.900"
           lineHeight="1.3"
+          noOfLines={2}
           _groupHover={{ color: 'gray.600' }}
           transition="color 0.2s"
         >
