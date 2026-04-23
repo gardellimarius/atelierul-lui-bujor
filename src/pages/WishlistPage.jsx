@@ -62,11 +62,13 @@ export default function WishlistPage() {
                     flexDir="column"
                     _hover={{ textDecoration: 'none' }}
                   >
-                    <Box position="relative" overflow="hidden" bg="gray.100" sx={{ aspectRatio: '3/4' }}>
+                    <Box position="relative" w="full" paddingBottom="133.33%" overflow="hidden" bg="gray.100">
                       {product.image_url ? (
                         <Image
                           src={product.image_url}
                           alt={product.name}
+                          position="absolute"
+                          top={0} left={0}
                           w="full"
                           h="full"
                           objectFit="cover"
@@ -74,7 +76,7 @@ export default function WishlistPage() {
                           _groupHover={{ transform: 'scale(1.04)' }}
                         />
                       ) : (
-                        <Box w="full" h="full" bg="gray.100" />
+                        <Box position="absolute" top={0} left={0} w="full" h="full" bg="gray.100" />
                       )}
                     </Box>
                     <Box pt={3}>

@@ -74,9 +74,10 @@ export default function CategoriesSection() {
                   as={RouterLink}
                   to={`/products?category=${encodeURIComponent(cat.name)}`}
                   position="relative"
+                  w="full"
+                  paddingBottom="133.33%"
                   overflow="hidden"
                   bg="gray.100"
-                  sx={{ aspectRatio: '3/4', '&:hover img': { transform: 'scale(1.06)' } }}
                   _hover={{ textDecoration: 'none' }}
                   role="group"
                   display="block"
@@ -85,10 +86,13 @@ export default function CategoriesSection() {
                     <Image
                       src={cat.image_url}
                       alt={cat.name}
+                      position="absolute"
+                      top={0} left={0}
                       w="full"
                       h="full"
                       objectFit="cover"
                       transition="transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94)"
+                      _groupHover={{ transform: 'scale(1.06)' }}
                     />
                   )}
                   <Box
